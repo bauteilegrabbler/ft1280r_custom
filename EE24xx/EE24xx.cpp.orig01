@@ -1,0 +1,132 @@
+/*!
+ * \file EE24xx.cpp
+ * Functions for accessing the 24LCxx I2C EEPROMs from Microchip et al.
+ * All documentation was moved to EE24xx.h .
+ *
+ * \author Andreas Czechanowski, DL4SDC
+ * \date 2012-11-25  Created
+ */
+
+#include <Wire.h>
+#include "EE24xx.h"
+
+
+// the class constructor
+EE24xx::EE24xx(uint8_t i2c_address = 0x50, ee24Type ee_model = EE24x512)
+{
+  switch(ee_model)
+  {
+    case EE24x32:
+      ee_pagemask = 0x1f;
+      ee_maxaddress = 0x0fffL;
+      break;
+
+    case EE24x64:
+      ee_pagemask = 0x1f;
+      ee_maxaddress = 0x1fffL;
+      break;
+
+    case EE24x128:
+      ee_pagemask = 0x3f;
+      ee_maxaddress = 0x3fffL;
+      break;
+
+    case EE24x256:
+      ee_pagemask = 0x3f;
+      ee_maxaddress = 0x7fffL;
+      break;
+
+    case EE24x512:
+      ee_pagemask = 0x7f;
+      ee_maxaddress = 0xffffL;
+      break;
+
+    default:
+      ee_pagemask = 0x01;
+      ee_maxaddress = 0xffff;
+      break;
+  }
+  ee_address = i2c_address;
+}
+
+
+/*!
+ * reads a number of bytes at given address from the I2C-EEPROM.
+ * The I2C bus address is currently hardwired via EE_ADDR.
+ *
+ * @param addr  memory start address within EEPROM
+ * @param buf   array of bytes to read into
+ * @param cnt   number of bytes in buf to read
+ */
+void EE24xx::read(unsigned int addr, unsigned char *buf, unsigned char cnt)
+{
+  unsigned char n;
+  unsigned char rcnt;
+
+  Wire.beginTransmission(ee_address);
+  Wire.write(addr >> 8);
+  Wire.write(addr & 0xff);
+  Wire.endTransmission();
+  // CAUTION: The Wire library defines an internal BUFFER_LENGTH (== 32)
+  // for all read and write operations. Transferring more Bytes
+  // in one transfer will result in erratic behaviour.
+  do
+  {
+    rcnt = (cnt > 32 ? 32 : cnt);
+    Wire.requestFrom(ee_address, rcnt);
+    for (n = 0; n < rcnt; n++)
+    {
+      *buf++ = Wire.read();
+    }
+    cnt -= rcnt;
+  } while (cnt > 0);
+}
+
+
+/*!
+ * writes a number of bytes to the I2C-EEPROM at given address.
+ * The I2C-bus address is currently hardwired via EE_ADDR.
+ * The caller must ensure that data is not written across page boundaries.
+ * This function may take some time since it waits for the EEPROM to
+ * complete writing.
+ *
+ * @param addr  memory start address within EEPROM
+ * @param buf   array of bytes to write from
+ * @param cnt   number of bytes in buf to write
+ */
+void EE24xx::write(unsigned int addr, unsigned char *buf, unsigned char cnt)
+{
+  unsigned char n;
+  unsigned char wcnt;
+
+  // CAUTION: The Wire library defines an internal BUFFER_LENGTH (== 32)
+  // for all read and write operations. Transferring more Bytes
+  // in one transfer will result in erratic behaviour.
+  // This also means loss of performance since one page must be written
+  // in pieces when ee_pagesize is 32 or above.
+  do
+  {
+    Wire.beginTransmission(ee_address);
+    // send memory address of first byte
+    Wire.write(addr >> 8);
+    Wire.write(addr & 0xff);
+    wcnt = (cnt > 30 ? 30 : cnt);
+    do // for (n = 0; n < cnt; n++)
+    {
+      Wire.write(*buf++);
+      addr++;
+      wcnt--;
+      cnt--;
+      // loop until last address of a page (128 bytes) was written or finished
+    } while ((wcnt > 0) && ((addr & ee_pagemask) != 0));
+    Wire.endTransmission();
+
+    // poll until EEPROM has completed writing data
+    do
+    {
+      Wire.beginTransmission(ee_address);
+      n = Wire.endTransmission();
+    } while (n != 0);
+  } while (cnt > 0);
+}
+

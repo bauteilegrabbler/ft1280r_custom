@@ -1,0 +1,26 @@
+Microchip I2C EEPROMs
+Model    Memory  PageSize  AddrBytes
+24xx00     128      1          1
+24xx01      1k      8          1
+24xx014     1k     16          1
+24xx02      2k      8          1
+24xx022     2k      8          1
+24xx024     2k     16          1
+24xx025     2k     16          1
+24xx04      4k     16          1  +1BlockSelectBit
+24xx08      8k     16          1  +2BlockSelectBits
+24xx16     16k     16          1  +3BlockSelectBits
+24xx32     32k     32          2
+24xx64     64k     32          2
+24xx65     64k      8          2
+24xx128   128k     64          2
+24xx256   256k     64          2
+24xx512   512k    128          2
+24xx515   512k     64          2  notForNewDesigns
+24xx1025    1M    128          2  +1BlockSelectBit_A2
+24xx1026    1M    128          2  +1BlockSelectBit
+
+NOTES:
+BlockSelectBits are upper memory addresses and are
+contained in the lower bits of the I2C address word.
+

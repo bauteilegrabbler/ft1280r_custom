@@ -1,0 +1,118 @@
+void event(eAction action, eATyp typ,char* text)
+{
+  if(action == eAction_VFO)
+  { 
+     if(typ==eATyp_DARSTELLEN_Z1)
+     {
+        uint16_t p3 = frequency%1000;      
+        uint16_t p2 = ((uint32_t)(frequency/1000))%1000;
+        uint16_t p1 = (frequency/1000000)%10000;
+        sprintf(text, "%04d.%03d,%03d MHz",p1,p2,p3);
+     }
+     else if(typ==eATyp_DARSTELLEN_Z2)
+     {
+        char stepText[5];
+        char offsetText[7];
+        memset(stepText,0,5);
+        memset(offsetText,0,7);
+        switch(step)
+        {
+          case eAction_STEP_100k: mystrncpy(stepText,"100k",4);break;
+          case eAction_STEP_50k: mystrncpy(stepText,"50k",4);break;
+          case eAction_STEP_25k: mystrncpy(stepText,"25k",4);break;
+          case eAction_STEP_12k5: mystrncpy(stepText,"12k5",4);break;
+          case eAction_STEP_10k: mystrncpy(stepText,"10k",3);break;
+          case eAction_STEP_6k25: mystrncpy(stepText,"6k25",4);break;
+          case eAction_STEP_5k: mystrncpy(stepText,"5k",2);break;
+          case eAction_STEP_1k: mystrncpy(stepText,"1k",2);break;
+          case eAction_STEP_1M:mystrncpy(stepText,"1MHz",4);break;
+          default: mystrncpy(stepText,"????",4);break;
+        }
+        switch(offset)
+        {
+          case eAction_OFFSET_000:mystrncpy(offsetText," 0 MHz",6);break;
+          case eAction_OFFSET_P28:mystrncpy(offsetText,"+28MHz",6);break;
+          case eAction_OFFSET_N28:mystrncpy(offsetText,"-28MHz",6);break;
+          case eAction_OFFSET_P59:mystrncpy(offsetText,"+59MHz",6);break;
+          
+          default:mystrncpy(offsetText,"?????",5);break;
+        }
+        bool isFreqSet = false;
+        bool isSending = pttActive;
+        sprintf(text+0, "%4s %s %s %6s",stepText,isSending?"\xFF":"\xDB",isFreqSet?"*":"o",offsetText);
+     }
+     else//? das ist der fall (ausgewaehlt, turnup, turndown), also der button
+     {  
+        uint32_t stepValue = 1000;
+        switch(step)
+        {
+          case eAction_STEP_100k: stepValue=100000;break;
+          case eAction_STEP_50k: stepValue=50000;break;
+          case eAction_STEP_25k: stepValue=25000;break;
+          case eAction_STEP_12k5: stepValue=12500;break;
+          case eAction_STEP_10k: stepValue=10000;break;
+          case eAction_STEP_6k25: stepValue=6250;break;
+          case eAction_STEP_5k: stepValue=5000;break;
+          case eAction_STEP_1k: stepValue=1000;break;
+          case eAction_STEP_1M: stepValue=1000000;break;
+          default: break;
+        }
+        if(typ==eATyp_TURN_UP)
+        {
+          frequency += stepValue;
+        }
+        else if (typ==eATyp_TURN_DOWN)
+        {
+          frequency -= stepValue;
+        }
+        if(frequency < FREQ_MIN)frequency = FREQ_MAX;
+        if(frequency > FREQ_MAX)frequency = FREQ_MIN;
+        oszillatorAnsteuern();
+     }
+   
+  }
+  else
+  {
+    switch(action)
+    {
+      case eAction_STEP_1M:
+      case eAction_STEP_100k:
+      case eAction_STEP_50k:
+      case eAction_STEP_25k:
+      case eAction_STEP_12k5:
+      case eAction_STEP_10k:
+      case eAction_STEP_6k25:
+      case eAction_STEP_5k:
+      case eAction_STEP_1k:
+        //step action
+        step = action;break;
+      case eAction_OFFSET_000:
+      case eAction_OFFSET_P28:
+      case eAction_OFFSET_N28:
+      case eAction_OFFSET_P59:
+        offset = action;break;
+    }
+    if(action==previousAction && previousTyp == typ)return;
+    previousAction = action;
+    previousTyp = typ;
+    Serial.print("Menu-Aktion ");
+    Serial.print(action);
+    Serial.print(" ");
+    switch(typ)
+    { 
+       case eATyp_DARSTELLEN_Z1:
+       case eATyp_DARSTELLEN_Z2:
+          break;
+       case eATyp_AUSGEWAEHLT:
+          Serial.print("AUSGEWAEHLT");
+          break;
+       case eATyp_TURN_UP:
+          Serial.print("TURN_UP");
+          break;
+       case eATyp_TURN_DOWN:
+          Serial.print("TURN_DOWN");
+          break;
+    }  
+    Serial.println("");
+  }
+}

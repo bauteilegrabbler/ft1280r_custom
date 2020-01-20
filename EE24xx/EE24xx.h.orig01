@@ -1,0 +1,48 @@
+/*!
+ * \file EE24xx.cpp
+ * Functions for accessing the 24LCxx I2C EEPROMs from Microchip et al.
+ * All documentation was moved to EE24xx.h .
+ *
+ * \author Andreas Czechanowski, DL4SDC
+ * \date 2012-11-25  Created
+ */
+
+/*!
+ * \mainpage
+ *
+ * \section Datasheets
+ * - Microchip 24xx512 (  )
+ */
+
+#ifndef __EE24xx_H__
+#define __EE24xx_H__
+
+enum ee24Type {
+  EE24x32 = 12,
+  EE24x64 = 13,
+  EE24x128 = 14,
+  EE24x256 = 15,
+  EE24x512 = 16
+};
+
+class EE24xx
+{
+  // accessable from anywhere outside
+  public:
+    EE24xx(uint8_t ee_address, ee24Type ee_model);
+
+    void read(unsigned int addr, unsigned char *buf, unsigned char cnt);
+
+    void write(unsigned int addr, unsigned char *buf, unsigned char cnt);
+
+  // only accessible by own class functions
+  private:
+    uint8_t  ee_address;
+    uint8_t  ee_pagemask;
+    uint32_t ee_maxaddress;
+
+  // accessible also by derived classes
+  protected:
+};
+
+#endif /* __EE24xx_H__ */
